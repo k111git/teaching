@@ -1,0 +1,72 @@
+[
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "teaching",
+    "section": "",
+    "text": "This file will become your README and also the index of your documentation."
+  },
+  {
+    "objectID": "index.html#install",
+    "href": "index.html#install",
+    "title": "teaching",
+    "section": "Install",
+    "text": "Install\npip install ..."
+  },
+  {
+    "objectID": "index.html#how-to-use",
+    "href": "index.html#how-to-use",
+    "title": "teaching",
+    "section": "How to use",
+    "text": "How to use\nFill me in please! Don’t forget code examples:"
+  },
+  {
+    "objectID": "interactive_predator_prey.html",
+    "href": "interactive_predator_prey.html",
+    "title": "teaching",
+    "section": "",
+    "text": "from ipywidgets import interactive\nimport matplotlib.pyplot as plt\nimport numpy as np\nfrom sympy import symbols,Matrix,solve,diff,init_printing\nfrom scipy.integrate import odeint\ninit_printing()\n\n#Always use a large enough font size!\nplt.rcParams['axes.labelsize'] = 16\nplt.rcParams['xtick.labelsize'] = 14\nplt.rcParams['ytick.labelsize'] = 14"
+  },
+  {
+    "objectID": "interactive_predator_prey.html#predator-prey-model",
+    "href": "interactive_predator_prey.html#predator-prey-model",
+    "title": "teaching",
+    "section": "Predator prey model:",
+    "text": "Predator prey model:\nx: Prey (Rabbits)  y: Predator (Foxes)\n\\(F(x,y) = (\\underbrace{a x}_{\\text{Rabbits reproduce}} - \\underbrace{b x y}_{\\text{Rabbits get eaten by fox}}, \\underbrace{-c y}_{\\text{Foxes die out without rabbits}}+\\underbrace{d x y}_{\\text{Foxes thrive by eating rabbits}})\\)\n\\(a,b,c,d > 0\\) are parameters of the model. In simple terms, \\(a\\) describes the reproduction rate of rabbits in the absence of foxes, \\(b\\) describes the reduction of rabbit population if a rabbit meets a fox, \\(c\\) describes the decay rate of the fox population if there are not rabbits (starving foxes), and finally \\(d\\) describes the increase of fox population if a fox meets a rabbit.\n\n#symbols is a function from the sympy package, defines symbolic variables\nx,y,a,b,c,d = symbols('x y a b c d')\n\ndef F(x,y,a,b,c,d):\n    return [a*x - b*x*y, -c *y+d*x*y]\n\n\nGet fixpoints\nSolve \\(F(x,y)=(0,0)\\)\n\n#solve is a function from the sympy package\nfps=solve(F(x,y,a,b,c,d),[x,y]) #solves a*x - b*x*y == 0 && -c *y+d*x*y == 0, solving for x and y\nfps\n\n\n\n\n\ndef fix(i,a1,b1,c1,d1):\n    vl=list(zip([a,b,c,d],[a1,b1,c1,d1]))\n    return [z.subs(vl) for z in fps[i]]\n\n\n\nJacobian Matrix\n\ni,j = symbols('i j')\n\n\n#Define a vector with all state variables, easier to generalize to more dimensions\nv=[x,y]\ndef jij(i,j):\n    #diff is a function from the sympy package\n    return diff(F(x,y,a,b,c,d)[i],v[j])\n\n\n#Marix function from sympy:\nJ = Matrix(len(v),len(v),jij)\n#J now is the Jacobian matrix in symbolic form\nJ\n\n\n\n\n\n# #Explicit way\n# J = Matrix(np.empty([len(v),len(v)]))\n# for i in range(0,len(v)):\n#     for j in range(0,len(v)):\n#         J[i,j]=diff(F(x,y,a,b,c,d)[i],v[j])\n\n# #J now is the Jacobian matrix in symbolic form\n# J\n\n\n\nStability of first fixpoint\nCalculate Eigenvalues of J at first fixpoint\n\nf1l=J.subs(list(zip([x,y],fps[0]))).eigenvals()\n#.subs replaces x and y with the values in fps[0], hence x=0,y=0. \n#.eigenvals returns diccionary with eigenvalues and their multiplicity.\n#following line extracts only Eigenvalues\n[evs for evs,multiplicity in f1l.items()]\n\n\n\n\nOne Eigenvalue is positive, hence fixpoint is unstable.\n\n\nStability of second fixpoint\nCalcualte Eigenvalues of J at second fixpoint\n\nf2l=J.subs(list(zip([x,y],fps[1]))).eigenvals()\n[evs for evs,multiplicity in f2l.items()]\n\n\n\n\nSince a,b,c,d > 0, both Eigenvalues are purely imaginary. We cannot say anything about the stability of the fixpoint from this (more advanced techniques would have to be applied), but the imaginary Eigenvalues suggest oscillating behavior.\n\n\nStreamplot and numerical integration\nIndeed we find an oscillating behavior by looking at the streamplot as well as the numerical solution of the differential equation.\n\nr=5\nx1 = np.linspace(0,r,101)\nX,Y = np.meshgrid(x1,x1)\n\n#initial condition for integration\nx0 = [1.5,0.8]\n\n#define function in vector like input form. \ndef F2(vx,t,a,b,c,d):\n    x,y=vx\n    return F(x,y,a,b,c,d)\n\nt = np.linspace(0, 40, 201)\n    \ndef plotF(a,b,c,d):\n    #Evaluate streamplot data\n    U, V = F(X,Y,a,b,c,d)\n    #Numberical integration\n    sol = odeint(F2, x0, t, args=(a,b,c,d))\n    \n    f, ax = plt.subplots(1,2,figsize=(12,6))\n    \n    ax[0].streamplot(X, Y, U, V,density=1.5,linewidth=0.5,color='black')\n    #hightlight stream lines originating from initial conditions:\n    ax[0].streamplot(X, Y, U, V,density=1.5,linewidth=1.5,color='g',start_points=[x0])\n    ax[0].plot(x0[0], x0[1], 'bo',color='g')\n    #plot fixpoint in black:\n    myfp=fix(1,a,b,c,d)\n    ax[0].plot(myfp[0], myfp[1], 'bo',color='black')\n    ax[0].axis((0, r, -0, r))\n    ax[0].set_xlabel(\"x\")\n    ax[0].set_ylabel(\"y\")\n    \n    \n    ax[1].plot(t, sol[:, 0],  label='x(t)')\n    ax[1].plot(t, sol[:, 1],  label='y(t)')\n    ax[1].legend(loc=1,fontsize=14)\n    ax[1].set_xlabel('t')\n    ax[1].set_ylabel('Population')\n    \n    plt.tight_layout()\n    plt.show()\n    \ninteractive_plot = interactive(plotF,  a=(0,2,0.1), b=(0,2, 0.1),c=(0,2,0.1),d=(0,2,0.1))    \n\ninteractive_plot"
+  },
+  {
+    "objectID": "Neural_Network.html",
+    "href": "Neural_Network.html",
+    "title": "teaching",
+    "section": "",
+    "text": "import matplotlib.pyplot as plt\nplt.rcParams['axes.labelsize'] = 16\nplt.rcParams['xtick.labelsize'] = 14\nplt.rcParams['ytick.labelsize'] = 14\nimport numpy as np\ndef plot_nn():\n    fig,ax=plt.subplots(figsize=(5,5))\n    x1=list(zip([0,0,0],[0.2,0.5,0.8]))\n    x2=list(zip([1,1,1,1],[0,0.33,0.66,1]))\n    x3=list(zip([2],[0.5]))\n    for y1 in x1:\n        for y2 in x2:\n            ax.plot([y1[0],y2[0]],[y1[1],y2[1]],c='C0')        \n    for y1 in x2:\n        for y2 in x3:\n            ax.plot([y1[0],y2[0]],[y1[1],y2[1]],c='C1')        \n    ax.plot([0,0,0],[0.2,0.5,0.8],\"o\",markersize=10)\n    ax.plot([1,1,1,1],[0,0.33,0.66,1],\"o\",markersize=10)\n    ax.plot([2],[0.5],'o',markersize=10)\n    plt.axis('off')\n    return plt"
+  },
+  {
+    "objectID": "Neural_Network.html#preliminaries",
+    "href": "Neural_Network.html#preliminaries",
+    "title": "teaching",
+    "section": "Preliminaries",
+    "text": "Preliminaries\nCost function: \\[\n\\begin{equation}\nC = \\sum_{j} (a_j^{(L)} - y_j)^2 \\equiv \\sum_{j} C_j\n\\end{equation}\n\\]\nWeights and biases: \\[\nz_j^{(L)} = \\sum_k \\omega_{jk}^{(L)} a_k^{(L-1)} + b_j^{(L)}\n\\]\nActivation: \\[\n\\begin{equation}\na_j^{(L)} = \\sigma(z_j^{(L)})\n\\end{equation}\n\\]\nChain rule: \\[\n\\begin{equation}\n\\frac{\\partial C_0}{\\partial \\omega_{jk}^{(L)}} =\n\\frac{\\partial z_j^{(L)}}{\\partial \\omega_{jk}^{(L)}}\n\\frac{\\partial a_j^{(L)}}{\\partial z_j^{(L)}}\n\\frac{\\partial C_0}{\\partial a_j^{(L)}}\n\\end{equation}\n\\] and \\[\n\\begin{equation}\n\\frac{\\partial C_0}{\\partial a_k^{(L-1)}} =\n\\sum_{j}\n\\frac{\\partial z_j^{(L)}}{\\partial a_k^{(L-1)}}\n\\frac{\\partial a_j^{(L)}}{\\partial z_j^{(L)}}\n\\frac{\\partial C_0}{\\partial a_j^{(L)}}\n\\end{equation}\n\\]"
+  },
+  {
+    "objectID": "Neural_Network.html#input-1-hidden-output-with-1-neuron",
+    "href": "Neural_Network.html#input-1-hidden-output-with-1-neuron",
+    "title": "teaching",
+    "section": "Input, 1 hidden, output with 1 neuron:",
+    "text": "Input, 1 hidden, output with 1 neuron:\nHere, let us consider the a NN with input layer, 1 hidden layer, and one output layer with a single neuron:\n\nplot_nn().show()\n\n\n\n\nHere: \\[\\begin{equation}\n\\sigma(x) = \\frac{1}{1+e^{-x}}\n\\end{equation}\\] hence \\[\\begin{equation}\n\\frac{\\partial \\sigma(x)}{\\partial x}=\\sigma(x) (1-\\sigma(x))\n\\end{equation}\\]\n\\[\\begin{equation}\n\\frac{\\partial C_0}{\\partial \\omega_{1,k}^{(L)}} = a_k^{(L-1)} a_{1}^{(L)} (1-a_{1}^{(L)})\n2 (a_1^{(L)} - y_1)\n\\end{equation}\\]\n\\[\\begin{align}\n\\frac{\\partial C}{\\partial \\omega_{1,k}^{(L)}} & =\n\\sum_i\na_{i,k}^{(L-1)} a_{i,1}^{(L)} (1-a_{i,1}^{(L)})\n2 (a_{i,1}^{(L)} - y_{i,1}) \\\\\n\\frac{\\partial C}{\\partial \\omega^{(L)}} & = a^{(L)^T} \\cdot \\left[ a^{(L)} (1-a^{(L)} 2 (a^{L}-y) \\right]\n\\end{align}\\] where \\(a^{(L)^T}\\) has shape \\((k,i)\\) and \\([...]\\) has shape \\((i,1)\\). Hence, \\(\\frac{\\partial C}{\\partial \\omega^{(L)}}\\) has shape \\((k,1)\\), which is the dimension of \\(W^{(L)}\\).\nWe have: \\[\\begin{align}\n\\frac{C_0}{\\partial \\omega_{jk}^{(L-1}} & =\n\\frac{\\partial z_j^{L-1}}{\\partial \\omega_{j,k}^{(L-1)}}\n\\frac{a_j^{(L-1)}}{\\partial z_j^{(L-1)}}\n\\frac{\\partial C_0}{\\partial a_j^{(L-1)}} \\\\\n\\frac{\\partial z_j^{L-1}}{\\partial \\omega_{j,k}^{(L-1)}} & = a_k^{(L-2)}=x_k \\\\\n\\frac{a_j^{(L-1)}}{\\partial z_j^{(L-1)}} & = a_j^{(L-1)} (1-a_j^{(L-1)}) \\\\\n\\frac{\\partial C_0}{\\partial a_j^{(L-1)}} & = \\omega_{j,1}^{(L)} a_1^{(L)}  (1-a_1^{(L)}) 2 (a_1^{(L)} - y_1)\n\\end{align}\\]\nThis eventually yields: \\[\n\\begin{equation}\n\\frac{\\partial C}{\\partial \\omega^{L-1}} =\nx^T \\cdot \\left[\n\\left[(2 (a^{(L)} - y) a^{(L)} (1-a^{(L)}))\n\\cdot  \\omega^{L} \\right]\na^{L-1}\n\\right]\n\\end{equation}\n\\] where \\((2 (a^{(L)} - y) a^{(L)} (1-a^{(L)})) \\cdot \\omega^{L}\\) and \\(a^{L-1}\\) both have shape \\((i,n_{L-1})\\) (hence their multiplication is understood component-wise). \\(x^T\\) has shape \\((k,i)\\), hence \\(\\frac{\\partial C}{\\partial \\omega^{L-1}}\\) has shape \\((k,n_{L-1})\\), which is the correct shape for weight matrix \\(\\omega^{L-1}\\) (the layer has \\(n_{L-1}\\) neurons.\n\ndef sigmoid(x):\n    return 1.0/(1.0+ np.exp(-x))\n\ndef sigmoid_derivative(x):\n    return x * (1.0 - x)\n    #return sigmoid(x)*(1-sigmoid(x))\n    #actual derivative is sigm(x)*(1-sigm(x))\n    #check: integrate(sigm(x)*(1-sigm(x)))\n\n\nclass NeuralNet:\n    def __init__(self,x,target,n_neurons):\n        self.x = x\n        self.w1 = np.random.rand(self.x.shape[1],n_neurons)\n        #first weights have shape (n_features,neurons). Number of features is x.shape[1]. \n        #Number of data points would be x.shape[0].\n        self.w2 = np.random.rand(n_neurons,1)\n        #second weights have shape n_neurons,1, because we have a single output neuron.\n        self.target=target\n        #self.l2=np.zeros(self.target.shape)\n        \n    def feedforward(self):\n        self.l1 = sigmoid(np.dot(self.x,self.w1))\n        self.l2 = sigmoid(np.dot(self.l1,self.w2))\n        \n    def backpropagate(self):\n        d_w2 = np.dot(self.l1.T, (2*(self.target - self.l2) * sigmoid_derivative(self.l2)))\n        d_w1 = np.dot(self.x.T,  (np.dot(2*(self.target - self.l2) * sigmoid_derivative(self.l2), self.w2.T) * sigmoid_derivative(self.l1)))\n\n        # update the weights with the derivative (slope) of the loss function\n        self.w1 += d_w1\n        self.w2 += d_w2\n\n\nX=np.array([[1,0,0,0],[1,1,0,0],[1,1,1,0],[1,1,1,1]])\ny=np.array([[1],[0.5],[0],[0]])\n\n\n#Test the feed forward:\n\nnn = NeuralNet(X,y,4)\n\nnn.feedforward()\n\nnn.l2\n\narray([[0.74298952],\n       [0.77266383],\n       [0.80243594],\n       [0.82108299]])\n\n\n\n#Test one iteration:\n\nnn = NeuralNet(X,y,5)\nnn.feedforward()\nprint(nn.l2)\nnn.backpropagate() \nnn.feedforward()\nprint(nn.l2)\n\n[[0.89237396]\n [0.915679  ]\n [0.93387295]\n [0.94847292]]\n[[0.81359379]\n [0.83741834]\n [0.86087637]\n [0.88226216]]\n\n\n\n#Train the network:\n\nlosses=[]\n\nprintout=False\nnn = NeuralNet(X,y,5)\n\n\nfor i in range(1500):\n    nn.feedforward()\n    nn.backpropagate()\n    losses.append(np.sqrt(np.sum((y-nn.l2)**2)))\n\nfor a,b in zip(nn.l2.flatten(),y.flatten()):\n    print(a,b)\n\nfig,ax=plt.subplots()\nax.plot(losses)\nax.set_xlabel(\"Iterations\")\nax.set_ylabel(\"Loss\")\nplt.show()\n\n0.9858946966337961 1.0\n0.5000053769581523 0.5\n0.010322635183360511 0.0\n0.0057591703798054485 0.0"
+  },
+  {
+    "objectID": "Neural_Network.html#references",
+    "href": "Neural_Network.html#references",
+    "title": "teaching",
+    "section": "References:",
+    "text": "References:\nMath of backpropagation: https://www.youtube.com/watch?v=tIeHLnjs5U8\nBuild NN: https://towardsdatascience.com/how-to-build-your-own-neural-network-from-scratch-in-python-68998a08e4f6"
+  },
+  {
+    "objectID": "core.html",
+    "href": "core.html",
+    "title": "core",
+    "section": "",
+    "text": "source\n\nfoo\n\n foo ()"
+  }
+]
